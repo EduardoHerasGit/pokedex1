@@ -14,41 +14,37 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class DetailUiState(
-    val name:String = "",
-    val artworkId:Int? = null
-)
-
+sealed interface DetailUiState {
+    data object Loading : DetailUiState
+    data class Success(
+        val name: String,
+        val artworkId: Int
+    ) : DetailUiState
+    data object NotFound : DetailUiState
+}
 
 @HiltViewModel
 class PokemonDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val pokemonRepository: PokemonRepository
-
-): ViewModel() {
-
+) : ViewModel() {
 
     private val _uiState: MutableStateFlow<DetailUiState> =
-        MutableStateFlow(DetailUiState())
+        MutableStateFlow(DetailUiState.Loading)
     val uiState: StateFlow<DetailUiState>
         get() = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
             val route = savedStateHandle.toRoute<Route.Detail>()
-            val pokemonId = route.id
-            val pokemon = pokemonRepository.readOne(pokemonId)
+            val pokemon = pokemonRepository.readOne(route.id)
 
-            pokemon?.let {
-                _uiState.value = pokemon.toDetailUiState()
-            }
+            _uiState.value = pokemon?.toDetailUiState() ?: DetailUiState.NotFound
         }
     }
-
 }
 
-fun Pokemon.toDetailUiState(): DetailUiState = DetailUiState(
+fun Pokemon.toDetailUiState(): DetailUiState.Success = DetailUiState.Success(
     name = this.name,
     artworkId = this.artworkId,
 )
-

@@ -10,17 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,31 +25,29 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun PokemonListScreen(
     modifier: Modifier = Modifier,
     viewModel: PokemonListViewModel = hiltViewModel(),
-    onShowDetail:(Long)->Unit,
+    onShowDetail: (Long) -> Unit,
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val uiState by viewModel.uiState.collectAsState()
-
-    when(uiState) {
+    when (val state = uiState) {
         is ListUiState.Initial -> {
-
+            // Nada que mostrar todavía
         }
+
         is ListUiState.Loading -> {
             PokemonLoadingScreen(modifier)
         }
+
         is ListUiState.Success -> {
-            PokemonList(modifier, uiState, onShowDetail)
+            PokemonList(modifier, state.pokemons, onShowDetail)
         }
     }
-
 }
 
 @Composable
@@ -72,22 +67,18 @@ private fun PokemonLoadingScreen(modifier: Modifier) {
 @Composable
 private fun PokemonList(
     modifier: Modifier,
-    uiState: ListUiState,
+    pokemons: List<ListItemUiState>,
     onShowDetail: (Long) -> Unit
 ) {
     LazyColumn(
         modifier = modifier,
         contentPadding = PaddingValues(horizontal = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
-
     ) {
         items(
-            items = (uiState as ListUiState.Success).pokemons,
-            key = { item ->
-                item.id
-            }
-        )
-        {
+            items = pokemons,
+            key = { item -> item.id }
+        ) {
             PokemonListItemCard(
                 pokemonId = it.id,
                 name = it.name,
@@ -100,33 +91,33 @@ private fun PokemonList(
 
 @Composable
 fun PokemonListItemCard(
-
-    modifier:Modifier = Modifier,
+    modifier: Modifier = Modifier,
     pokemonId: Long,
-    name:String,
-    spriteId:Int,
+    name: String,
+    spriteId: Int,
     onShowDetail: (Long) -> Unit,
-)
-{
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(128.dp)
-            .clickable(enabled = true,
-                onClick = {
-                    onShowDetail(pokemonId)
-                })
+        modifier = modifier
+            .fillMaxWidth()
+            .height(128.dp)
+            .clickable { onShowDetail(pokemonId) }
     ) {
         Row(
+            modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             Image(
                 modifier = Modifier.size(64.dp),
                 contentScale = ContentScale.Fit,
-                painter=painterResource(spriteId),
-                contentDescription = name)
-            Text(text= name,
-                style = MaterialTheme.typography.headlineSmall)
+                painter = painterResource(spriteId),
+                contentDescription = name
+            )
+            Text(
+                text = name,
+                style = MaterialTheme.typography.headlineSmall
+            )
         }
-
     }
 }
